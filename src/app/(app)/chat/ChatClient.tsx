@@ -4,12 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
+  BookOpen,
   Bot,
   Check,
   FileText,
   Megaphone,
   Mic,
   Send,
+  Smartphone,
   Sparkles,
   Square,
   ThumbsDown,
@@ -18,18 +20,71 @@ import {
   VolumeX,
 } from "lucide-react";
 import Markdown from "@/components/Markdown";
+import type { Fuente } from "@/lib/rag";
 import { paraVoz, useReconocimientoVoz, useSintesisVoz } from "./useVoz";
 
 type Mensaje = {
   rol: "usuario" | "asistente";
   texto: string;
   consultaId?: number;
-  fuentes?: { unidadId: number; titulo: string }[];
+  fuentes?: Fuente[];
   resuelta?: boolean;
   rating?: "up" | "down";
   escalada?: boolean;
   error?: boolean;
 };
+
+const DIAS_VERIFICACION = 90;
+
+/**
+ * Una fuente no vale lo mismo según de dónde salga: una unidad la escribió y
+ * validó una persona; una ficha técnica es un dato duro del catálogo, y ahí
+ * lo que importa es hace cuánto se verificó.
+ */
+function FuenteLink({ fuente }: { fuente: Fuente }) {
+  const base =
+    "flex items-center gap-1.5 text-xs font-medium transition hover:underline";
+
+  if (fuente.tipo === "ficha_tecnica") {
+    const desactualizada =
+      !fuente.verificadoEn ||
+      Date.now() - new Date(fuente.verificadoEn).getTime() >
+        DIAS_VERIFICACION * 86_400_000;
+    return (
+      <Link
+        href={`/catalogo/${fuente.productoId}`}
+        className={`${base} text-indigo-600 hover:text-indigo-700`}
+      >
+        <Smartphone size={13} className="shrink-0" />
+        <span>{fuente.etiqueta}</span>
+        {desactualizada && (
+          <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">
+            sin verificar
+          </span>
+        )}
+      </Link>
+    );
+  }
+
+  if (fuente.tipo === "glosario") {
+    return (
+      <span className={`${base} text-violet-600 hover:no-underline`}>
+        <BookOpen size={13} className="shrink-0" />
+        <span>{fuente.etiqueta}</span>
+      </span>
+    );
+  }
+
+  return (
+    <Link
+      href={`/qr/${fuente.unidadId}`}
+      className={`${base} text-blue-600 hover:text-blue-700`}
+    >
+      <FileText size={13} className="shrink-0" />
+      <span>Fuente: {fuente.etiqueta}</span>
+    </Link>
+  );
+}
 
 const SUGERENCIAS = [
   "El cliente dice que está muy caro",
@@ -246,14 +301,7 @@ export default function ChatClient({ nombre }: { nombre: string }) {
                 {m.fuentes && m.fuentes.length > 0 && (
                   <div className="mt-2.5 space-y-1 border-t border-slate-100 pt-2.5">
                     {m.fuentes.map((f) => (
-                      <Link
-                        key={f.unidadId}
-                        href={`/qr/${f.unidadId}`}
-                        className="flex items-center gap-1.5 text-xs font-medium text-blue-600 transition hover:text-blue-700 hover:underline"
-                      >
-                        <FileText size={13} className="shrink-0" />
-                        <span>Fuente: {f.titulo}</span>
-                      </Link>
+                      <FuenteLink key={`${f.tipo}-${f.etiqueta}`} fuente={f} />
                     ))}
                   </div>
                 )}

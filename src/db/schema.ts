@@ -1,5 +1,7 @@
 import {
   boolean,
+  date,
+  index,
   integer,
   jsonb,
   pgEnum,
@@ -7,6 +9,7 @@ import {
   serial,
   text,
   timestamp,
+  uniqueIndex,
   vector,
 } from "drizzle-orm/pg-core";
 
@@ -69,6 +72,45 @@ export const tipoDivergenciaEnum = pgEnum("tipo_divergencia", [
   "atajo_riesgoso",
   "manual_desactualizado",
   "error_tipico_novato",
+]);
+
+// --- Catálogo de producto (datos duros, deterministas) ----------------------
+//
+// El conocimiento del vendedor entra como texto libre y sale por similitud
+// semántica: eso sirve para argumentarios y objeciones, pero es el mecanismo
+// equivocado para un dato duro. "¿Cuánta batería tiene el S26 Ultra?" no puede
+// depender de que un chunk supere un umbral de coseno: es un dato exacto o
+// nada. Estas tablas son la fuente determinista de esos datos.
+
+export const categoriaProductoEnum = pgEnum("categoria_producto", [
+  "smartphone",
+  "plegable",
+  "tablet",
+  "wearable",
+  "audio",
+  "tv",
+  "accesorio",
+]);
+
+export const gamaEnum = pgEnum("gama", ["alta", "media", "entrada"]);
+
+export const estadoProductoEnum = pgEnum("estado_producto", [
+  "activo",
+  "descontinuado",
+  "proximo_lanzamiento",
+]);
+
+/** Familias de atributos: ordenan la ficha y acotan las comparativas. */
+export const grupoEspecificacionEnum = pgEnum("grupo_especificacion", [
+  "pantalla",
+  "rendimiento",
+  "camara",
+  "bateria",
+  "conectividad",
+  "durabilidad",
+  "software",
+  "audio",
+  "imagen",
 ]);
 
 export const cargos = pgTable("cargos", {
@@ -185,6 +227,94 @@ export const divergencias = pgTable("divergencias", {
   aceptada: boolean("aceptada").notNull().default(false),
 });
 
+export const productos = pgTable(
+  "productos",
+  {
+    id: serial("id").primaryKey(),
+    marca: text("marca").notNull().default("Samsung"),
+    modelo: text("modelo").notNull(),
+    // Como lo nombra el vendedor en piso: "s26u", "el ultra", "el fold".
+    aliases: text("aliases").array().notNull().default([]),
+    sku: text("sku"),
+    categoria: categoriaProductoEnum("categoria").notNull(),
+    gama: gamaEnum("gama").notNull(),
+    fechaLanzamiento: date("fecha_lanzamiento"),
+    fechaLanzamientoChile: date("fecha_lanzamiento_chile"),
+    // Precio de LISTA referencial. Nunca es el precio final de la venta.
+    precioListaClp: integer("precio_lista_clp"),
+    precioVigenteHasta: date("precio_vigente_hasta"),
+    almacenamientos: text("almacenamientos").array().notNull().default([]),
+    colores: text("colores").array().notNull().default([]),
+    // 1-2 frases: para quién es y por qué se elige.
+    resumenVenta: text("resumen_venta"),
+    estado: estadoProductoEnum("estado").notNull().default("activo"),
+    fuenteUrl: text("fuente_url"),
+    verificadoEn: timestamp("verificado_en"),
+    creadoEn: timestamp("creado_en").notNull().defaultNow(),
+    actualizadoEn: timestamp("actualizado_en").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("productos_marca_modelo_idx").on(t.marca, t.modelo),
+    index("productos_categoria_idx").on(t.categoria),
+    index("productos_aliases_idx").using("gin", t.aliases),
+  ]
+);
+
+/**
+ * Especificaciones en clave/valor a propósito. Un vendedor pregunta cosas
+ * impredecibles ("¿cuál tiene mejor apertura?", "¿los dos son IP68?"): con
+ * columnas fijas cada pregunta nueva sería una migración; así la comparativa
+ * entre dos productos es un JOIN sobre `clave`.
+ */
+export const especificaciones = pgTable(
+  "especificaciones",
+  {
+    id: serial("id").primaryKey(),
+    productoId: integer("producto_id")
+      .references(() => productos.id, { onDelete: "cascade" })
+      .notNull(),
+    grupo: grupoEspecificacionEnum("grupo").notNull(),
+    clave: text("clave").notNull(),
+    valor: text("valor").notNull(),
+    unidad: text("unidad"),
+    // Si es un argumento de venta, no solo un dato de la tabla.
+    esDiferenciador: boolean("es_diferenciador").notNull().default(false),
+    ordenVisual: integer("orden_visual").notNull().default(0),
+    fuenteUrl: text("fuente_url"),
+    verificado: boolean("verificado").notNull().default(false),
+  },
+  (t) => [
+    index("especificaciones_producto_grupo_idx").on(t.productoId, t.grupo),
+    uniqueIndex("especificaciones_producto_clave_idx").on(t.productoId, t.clave),
+  ]
+);
+
+/** Los tecnicismos traducidos a lenguaje de venta. */
+export const glosarioTecnico = pgTable(
+  "glosario_tecnico",
+  {
+    id: serial("id").primaryKey(),
+    termino: text("termino").notNull(),
+    aliases: text("aliases").array().notNull().default([]),
+    categoria: categoriaProductoEnum("categoria"),
+    definicionTecnica: text("definicion_tecnica").notNull(),
+    // Cómo explicárselo a un cliente que no sabe nada de tecnología.
+    traduccionVenta: text("traduccion_venta").notNull(),
+    // El "por lo tanto, a usted le sirve para...".
+    beneficioCliente: text("beneficio_cliente").notNull(),
+    // Lo que un vendedor NO debe decir sobre esto.
+    erroresComunes: text("errores_comunes").notNull(),
+    productosRelacionados: text("productos_relacionados")
+      .array()
+      .notNull()
+      .default([]),
+  },
+  (t) => [
+    uniqueIndex("glosario_termino_idx").on(t.termino),
+    index("glosario_aliases_idx").using("gin", t.aliases),
+  ]
+);
+
 export type Usuario = typeof usuarios.$inferSelect;
 export type Cargo = typeof cargos.$inferSelect;
 export type UnidadConocimiento = typeof unidadesConocimiento.$inferSelect;
@@ -194,3 +324,9 @@ export type Brecha = typeof brechas.$inferSelect;
 export type FuenteConocimiento = typeof fuentesConocimiento.$inferSelect;
 export type Contraste = typeof contrastes.$inferSelect;
 export type Divergencia = typeof divergencias.$inferSelect;
+export type Producto = typeof productos.$inferSelect;
+export type Especificacion = typeof especificaciones.$inferSelect;
+export type TerminoGlosario = typeof glosarioTecnico.$inferSelect;
+export type CategoriaProducto = Producto["categoria"];
+export type Gama = Producto["gama"];
+export type GrupoEspecificacion = Especificacion["grupo"];
