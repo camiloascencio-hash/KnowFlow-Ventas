@@ -1,0 +1,42 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+}
+
+body {
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Aparición suave de cada mensaje del chat */
+@keyframes message-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-message-in {
+  animation: message-in 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Puntos del indicador "escribiendo…" */
+@keyframes typing-bounce {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  40% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+.typing-dot {
+  animation: typing-bounce 1.2s infinite ease-in-out;
+}

@@ -1,0 +1,48 @@
+# Blueprint de Render para KnowFlow Ventas.
+# Despliega la app Next.js como Web Service (servidor Node persistente).
+# La base de datos es Neon (externa) — aquí solo va la app.
+#
+# Uso: en Render → New → Blueprint → conecta este repo. Render lee este archivo
+# y solo te pedirá los 2 secretos marcados como sync:false (DATABASE_URL y
+# GEMINI_API_KEY). El resto se configura solo.
+services:
+  - type: web
+    name: knowflow-ventas
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    healthCheckPath: /login
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      # Servidor persistente → pool de conexiones real (no 1 como en serverless)
+      - key: DB_POOL_MAX
+        value: "10"
+      - key: GEMINI_EMBED_MODEL
+        value: gemini-embedding-001
+      - key: ANTHROPIC_MODEL
+        value: claude-sonnet-4-6
+      - key: ANTHROPIC_MODEL_AGENTE
+        value: claude-haiku-4-5
+      - key: APP_MODE
+        value: investor_demo
+      - key: RAG_SIMILARITY_THRESHOLD
+        value: "0.68"
+      - key: RAG_TOP_K
+        value: "4"
+      - key: BRECHA_SIMILARITY_THRESHOLD
+        value: "0.7"
+      # NextAuth: Render genera un secreto seguro automáticamente
+      - key: NEXTAUTH_SECRET
+        generateValue: true
+      # Secretos: se ingresan en el dashboard (nunca en el repo)
+      # DATABASE_URL = conexión DIRECTA de Neon (sin -pooler)
+      - key: DATABASE_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      # Opcional: con ella el chat redacta con Claude; sin ella, modo demo
+      - key: ANTHROPIC_API_KEY
+        sync: false
