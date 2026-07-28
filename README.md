@@ -84,8 +84,37 @@ rubro: con cobertura 0.70–0.83, sin cobertura 0.57–0.63.
 
 ## Despliegue
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/camiloascencio-hash/KnowFlow-Ventas)
+
 `render.yaml` deja el servicio listo en Render (plan free, servidor persistente).
-Solo pide `DATABASE_URL`, `GEMINI_API_KEY` y opcionalmente `ANTHROPIC_API_KEY`.
+Render lee el blueprint y solo pide los 3 valores marcados `sync: false`:
+
+| Variable | De dónde sale |
+| --- | --- |
+| `DATABASE_URL` | Neon → base `knowflow_ventas`, conexión **directa** (sin `-pooler`) |
+| `GEMINI_API_KEY` | https://aistudio.google.com/apikey — obligatoria, genera los embeddings |
+| `ANTHROPIC_API_KEY` | Opcional. Sin ella el chat cae a modo demo (la búsqueda semántica sigue siendo real) |
+
+El resto (modelos, umbrales, `NEXTAUTH_SECRET`, pool de conexiones) se configura
+solo desde el blueprint. La URL pública la resuelve `RENDER_EXTERNAL_URL`, así
+que los QR apuntan al dominio correcto sin tocar nada.
+
+**Antes del primer deploy**, la base tiene que tener datos. Los seeds corren
+desde tu máquina contra `DATABASE_URL`, no desde Render:
+
+```bash
+npm run db:push
+npm run db:seed
+npm run seed:catalogo
+```
+
+Después del deploy, en el servicio de **KnowFlow** (la otra vertical) agrega la
+variable `VENTAS_URL` con la URL pública que te dé Render, para que el selector
+de verticales del login apunte acá.
+
+> Plan `free`: Render duerme el servicio tras un rato sin tráfico. El primer
+> request después de dormir tarda 30-60 s en despertar — tenlo en cuenta si vas
+> a mostrar la demo en vivo.
 
 ## Tests
 
