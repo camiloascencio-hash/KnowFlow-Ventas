@@ -1,0 +1,1352 @@
+{
+  "id": "182c8605-a892-4561-bc3f-bb604e08fb3a",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.brechas": {
+      "name": "brechas",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "cargo_id": {
+          "name": "cargo_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tema_detectado": {
+          "name": "tema_detectado",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "n_consultas_sin_resolver": {
+          "name": "n_consultas_sin_resolver",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "estado": {
+          "name": "estado",
+          "type": "estado_brecha",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'detectada'"
+        },
+        "embedding": {
+          "name": "embedding",
+          "type": "vector(768)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "timestamp_deteccion": {
+          "name": "timestamp_deteccion",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "timestamp_resolucion": {
+          "name": "timestamp_resolucion",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "brechas_cargo_id_cargos_id_fk": {
+          "name": "brechas_cargo_id_cargos_id_fk",
+          "tableFrom": "brechas",
+          "tableTo": "cargos",
+          "columnsFrom": [
+            "cargo_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.cargos": {
+      "name": "cargos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "descripcion": {
+          "name": "descripcion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.chunks": {
+      "name": "chunks",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "unidad_id": {
+          "name": "unidad_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "texto": {
+          "name": "texto",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "embedding": {
+          "name": "embedding",
+          "type": "vector(768)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "chunks_embedding_idx": {
+          "name": "chunks_embedding_idx",
+          "columns": [
+            {
+              "expression": "embedding",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "vector_cosine_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "hnsw",
+          "with": {}
+        },
+        "chunks_unidad_idx": {
+          "name": "chunks_unidad_idx",
+          "columns": [
+            {
+              "expression": "unidad_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "chunks_unidad_id_unidades_conocimiento_id_fk": {
+          "name": "chunks_unidad_id_unidades_conocimiento_id_fk",
+          "tableFrom": "chunks",
+          "tableTo": "unidades_conocimiento",
+          "columnsFrom": [
+            "unidad_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.consultas": {
+      "name": "consultas",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "usuario_id": {
+          "name": "usuario_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cargo_id": {
+          "name": "cargo_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "texto_pregunta": {
+          "name": "texto_pregunta",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "respuesta": {
+          "name": "respuesta",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "chunks_usados": {
+          "name": "chunks_usados",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "resuelta": {
+          "name": "resuelta",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "escalada": {
+          "name": "escalada",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "rating": {
+          "name": "rating",
+          "type": "rating",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "embedding": {
+          "name": "embedding",
+          "type": "vector(768)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "timestamp": {
+          "name": "timestamp",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "consultas_usuario_id_usuarios_id_fk": {
+          "name": "consultas_usuario_id_usuarios_id_fk",
+          "tableFrom": "consultas",
+          "tableTo": "usuarios",
+          "columnsFrom": [
+            "usuario_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "consultas_cargo_id_cargos_id_fk": {
+          "name": "consultas_cargo_id_cargos_id_fk",
+          "tableFrom": "consultas",
+          "tableTo": "cargos",
+          "columnsFrom": [
+            "cargo_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.contrastes": {
+      "name": "contrastes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "cargo_id": {
+          "name": "cargo_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "titulo": {
+          "name": "titulo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unidad_origen_id": {
+          "name": "unidad_origen_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "estado": {
+          "name": "estado",
+          "type": "estado_contraste",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'procesando'"
+        },
+        "resumen": {
+          "name": "resumen",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "creado_en": {
+          "name": "creado_en",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "contrastes_cargo_id_cargos_id_fk": {
+          "name": "contrastes_cargo_id_cargos_id_fk",
+          "tableFrom": "contrastes",
+          "tableTo": "cargos",
+          "columnsFrom": [
+            "cargo_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "contrastes_unidad_origen_id_unidades_conocimiento_id_fk": {
+          "name": "contrastes_unidad_origen_id_unidades_conocimiento_id_fk",
+          "tableFrom": "contrastes",
+          "tableTo": "unidades_conocimiento",
+          "columnsFrom": [
+            "unidad_origen_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.divergencias": {
+      "name": "divergencias",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "contraste_id": {
+          "name": "contraste_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "tipo_divergencia",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "descripcion": {
+          "name": "descripcion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "evidencia_manual": {
+          "name": "evidencia_manual",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "evidencia_operacion": {
+          "name": "evidencia_operacion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "riesgo": {
+          "name": "riesgo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recomendacion": {
+          "name": "recomendacion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "aceptada": {
+          "name": "aceptada",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "divergencias_contraste_id_contrastes_id_fk": {
+          "name": "divergencias_contraste_id_contrastes_id_fk",
+          "tableFrom": "divergencias",
+          "tableTo": "contrastes",
+          "columnsFrom": [
+            "contraste_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.especificaciones": {
+      "name": "especificaciones",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "producto_id": {
+          "name": "producto_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "grupo": {
+          "name": "grupo",
+          "type": "grupo_especificacion",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "clave": {
+          "name": "clave",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "valor": {
+          "name": "valor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unidad": {
+          "name": "unidad",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "es_diferenciador": {
+          "name": "es_diferenciador",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "orden_visual": {
+          "name": "orden_visual",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "fuente_url": {
+          "name": "fuente_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "verificado": {
+          "name": "verificado",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        }
+      },
+      "indexes": {
+        "especificaciones_producto_grupo_idx": {
+          "name": "especificaciones_producto_grupo_idx",
+          "columns": [
+            {
+              "expression": "producto_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "grupo",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "especificaciones_producto_clave_idx": {
+          "name": "especificaciones_producto_clave_idx",
+          "columns": [
+            {
+              "expression": "producto_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "clave",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "especificaciones_producto_id_productos_id_fk": {
+          "name": "especificaciones_producto_id_productos_id_fk",
+          "tableFrom": "especificaciones",
+          "tableTo": "productos",
+          "columnsFrom": [
+            "producto_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.fuentes_conocimiento": {
+      "name": "fuentes_conocimiento",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "cargo_id": {
+          "name": "cargo_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "tipo_fuente_conocimiento",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "titulo": {
+          "name": "titulo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "contenido": {
+          "name": "contenido",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "autor_id": {
+          "name": "autor_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "creado_en": {
+          "name": "creado_en",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "fuentes_conocimiento_cargo_id_cargos_id_fk": {
+          "name": "fuentes_conocimiento_cargo_id_cargos_id_fk",
+          "tableFrom": "fuentes_conocimiento",
+          "tableTo": "cargos",
+          "columnsFrom": [
+            "cargo_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "fuentes_conocimiento_autor_id_usuarios_id_fk": {
+          "name": "fuentes_conocimiento_autor_id_usuarios_id_fk",
+          "tableFrom": "fuentes_conocimiento",
+          "tableTo": "usuarios",
+          "columnsFrom": [
+            "autor_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.glosario_tecnico": {
+      "name": "glosario_tecnico",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "termino": {
+          "name": "termino",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "aliases": {
+          "name": "aliases",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        },
+        "categoria": {
+          "name": "categoria",
+          "type": "categoria_producto",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "definicion_tecnica": {
+          "name": "definicion_tecnica",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "traduccion_venta": {
+          "name": "traduccion_venta",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "beneficio_cliente": {
+          "name": "beneficio_cliente",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "errores_comunes": {
+          "name": "errores_comunes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "productos_relacionados": {
+          "name": "productos_relacionados",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        }
+      },
+      "indexes": {
+        "glosario_termino_idx": {
+          "name": "glosario_termino_idx",
+          "columns": [
+            {
+              "expression": "termino",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "glosario_aliases_idx": {
+          "name": "glosario_aliases_idx",
+          "columns": [
+            {
+              "expression": "aliases",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.productos": {
+      "name": "productos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "marca": {
+          "name": "marca",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'Samsung'"
+        },
+        "modelo": {
+          "name": "modelo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "aliases": {
+          "name": "aliases",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        },
+        "sku": {
+          "name": "sku",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "categoria": {
+          "name": "categoria",
+          "type": "categoria_producto",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "gama": {
+          "name": "gama",
+          "type": "gama",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fecha_lanzamiento": {
+          "name": "fecha_lanzamiento",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fecha_lanzamiento_chile": {
+          "name": "fecha_lanzamiento_chile",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "precio_lista_clp": {
+          "name": "precio_lista_clp",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "precio_vigente_hasta": {
+          "name": "precio_vigente_hasta",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "almacenamientos": {
+          "name": "almacenamientos",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        },
+        "colores": {
+          "name": "colores",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        },
+        "resumen_venta": {
+          "name": "resumen_venta",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estado": {
+          "name": "estado",
+          "type": "estado_producto",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'activo'"
+        },
+        "fuente_url": {
+          "name": "fuente_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "verificado_en": {
+          "name": "verificado_en",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "creado_en": {
+          "name": "creado_en",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "actualizado_en": {
+          "name": "actualizado_en",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "productos_marca_modelo_idx": {
+          "name": "productos_marca_modelo_idx",
+          "columns": [
+            {
+              "expression": "marca",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "modelo",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "productos_categoria_idx": {
+          "name": "productos_categoria_idx",
+          "columns": [
+            {
+              "expression": "categoria",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "productos_aliases_idx": {
+          "name": "productos_aliases_idx",
+          "columns": [
+            {
+              "expression": "aliases",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.unidades_conocimiento": {
+      "name": "unidades_conocimiento",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "cargo_id": {
+          "name": "cargo_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "tipo_unidad",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "titulo": {
+          "name": "titulo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "contenido_markdown": {
+          "name": "contenido_markdown",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "criticidad": {
+          "name": "criticidad",
+          "type": "criticidad",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "estado": {
+          "name": "estado",
+          "type": "estado_unidad",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'borrador'"
+        },
+        "autor_experto_id": {
+          "name": "autor_experto_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "validador_id": {
+          "name": "validador_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "comentario_rechazo": {
+          "name": "comentario_rechazo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fecha_publicacion": {
+          "name": "fecha_publicacion",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fecha_vigencia": {
+          "name": "fecha_vigencia",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "unidad_origen_id": {
+          "name": "unidad_origen_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "creado_en": {
+          "name": "creado_en",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "unidades_conocimiento_cargo_id_cargos_id_fk": {
+          "name": "unidades_conocimiento_cargo_id_cargos_id_fk",
+          "tableFrom": "unidades_conocimiento",
+          "tableTo": "cargos",
+          "columnsFrom": [
+            "cargo_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "unidades_conocimiento_autor_experto_id_usuarios_id_fk": {
+          "name": "unidades_conocimiento_autor_experto_id_usuarios_id_fk",
+          "tableFrom": "unidades_conocimiento",
+          "tableTo": "usuarios",
+          "columnsFrom": [
+            "autor_experto_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "unidades_conocimiento_validador_id_usuarios_id_fk": {
+          "name": "unidades_conocimiento_validador_id_usuarios_id_fk",
+          "tableFrom": "unidades_conocimiento",
+          "tableTo": "usuarios",
+          "columnsFrom": [
+            "validador_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.usuarios": {
+      "name": "usuarios",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password_hash": {
+          "name": "password_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rol": {
+          "name": "rol",
+          "type": "rol",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cargo_id": {
+          "name": "cargo_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "usuarios_cargo_id_cargos_id_fk": {
+          "name": "usuarios_cargo_id_cargos_id_fk",
+          "tableFrom": "usuarios",
+          "tableTo": "cargos",
+          "columnsFrom": [
+            "cargo_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "usuarios_email_unique": {
+          "name": "usuarios_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.categoria_producto": {
+      "name": "categoria_producto",
+      "schema": "public",
+      "values": [
+        "smartphone",
+        "plegable",
+        "tablet",
+        "wearable",
+        "audio",
+        "tv",
+        "accesorio"
+      ]
+    },
+    "public.criticidad": {
+      "name": "criticidad",
+      "schema": "public",
+      "values": [
+        "alta",
+        "media",
+        "baja"
+      ]
+    },
+    "public.estado_brecha": {
+      "name": "estado_brecha",
+      "schema": "public",
+      "values": [
+        "detectada",
+        "en_proceso",
+        "resuelta"
+      ]
+    },
+    "public.estado_contraste": {
+      "name": "estado_contraste",
+      "schema": "public",
+      "values": [
+        "procesando",
+        "completado",
+        "fallido"
+      ]
+    },
+    "public.estado_producto": {
+      "name": "estado_producto",
+      "schema": "public",
+      "values": [
+        "activo",
+        "descontinuado",
+        "proximo_lanzamiento"
+      ]
+    },
+    "public.estado_unidad": {
+      "name": "estado_unidad",
+      "schema": "public",
+      "values": [
+        "borrador",
+        "en_validacion",
+        "publicado",
+        "rechazado"
+      ]
+    },
+    "public.gama": {
+      "name": "gama",
+      "schema": "public",
+      "values": [
+        "alta",
+        "media",
+        "entrada"
+      ]
+    },
+    "public.grupo_especificacion": {
+      "name": "grupo_especificacion",
+      "schema": "public",
+      "values": [
+        "pantalla",
+        "rendimiento",
+        "camara",
+        "bateria",
+        "conectividad",
+        "durabilidad",
+        "software",
+        "audio",
+        "imagen"
+      ]
+    },
+    "public.rating": {
+      "name": "rating",
+      "schema": "public",
+      "values": [
+        "up",
+        "down"
+      ]
+    },
+    "public.rol": {
+      "name": "rol",
+      "schema": "public",
+      "values": [
+        "trabajador_nuevo",
+        "experto",
+        "validador",
+        "admin"
+      ]
+    },
+    "public.tipo_divergencia": {
+      "name": "tipo_divergencia",
+      "schema": "public",
+      "values": [
+        "conocimiento_no_documentado",
+        "atajo_riesgoso",
+        "manual_desactualizado",
+        "error_tipico_novato"
+      ]
+    },
+    "public.tipo_fuente_conocimiento": {
+      "name": "tipo_fuente_conocimiento",
+      "schema": "public",
+      "values": [
+        "manual",
+        "relato_experto",
+        "errores_operacionales"
+      ]
+    },
+    "public.tipo_unidad": {
+      "name": "tipo_unidad",
+      "schema": "public",
+      "values": [
+        "ficha_producto",
+        "argumentario",
+        "objecion",
+        "comparativa",
+        "promocion",
+        "procedimiento"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

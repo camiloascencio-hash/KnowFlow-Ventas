@@ -1,6 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+
+/**
+ * Capacidades del navegador leidas de forma segura para hidratacion.
+ *
+ * En el servidor no hay `window`. Si el soporte se evalua durante el render,
+ * el HTML del servidor y el del cliente difieren y React descarta la pagina
+ * entera. `useSyncExternalStore` existe justamente para esto: devuelve el
+ * snapshot del servidor primero y el del cliente despues de montar.
+ */
+const sinSuscripcion = () => () => {};
+const enServidor = () => false;
 
 /**
  * Hooks de asistencia por voz basados en el Web Speech API (nativo del
@@ -57,7 +74,11 @@ export function useReconocimientoVoz(opts: {
   onFinal?: (texto: string) => void;
 }) {
   const { lang = "es-CL", onInterino, onFinal } = opts;
-  const soportado = typeof window !== "undefined" && !!obtenerConstructor();
+  const soportado = useSyncExternalStore(
+    sinSuscripcion,
+    () => !!obtenerConstructor(),
+    enServidor
+  );
   const [escuchando, setEscuchando] = useState(false);
   const recRef = useRef<Reconocimiento | null>(null);
   const cbRef = useRef({ onInterino, onFinal });
@@ -117,7 +138,11 @@ export function useReconocimientoVoz(opts: {
 
 /** Síntesis de voz: leer un texto en voz alta. */
 export function useSintesisVoz(lang = "es-CL") {
-  const soportada = typeof window !== "undefined" && "speechSynthesis" in window;
+  const soportada = useSyncExternalStore(
+    sinSuscripcion,
+    () => "speechSynthesis" in window,
+    enServidor
+  );
   const [hablando, setHablando] = useState(false);
 
   useEffect(() => {

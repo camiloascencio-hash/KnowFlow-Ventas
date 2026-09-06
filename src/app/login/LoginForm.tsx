@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import Logo from "@/components/Logo";
 
 const DEMO_USERS = [
   { email: "vendedor@knowflow.cl", label: "Vendedor nuevo" },
@@ -58,10 +59,15 @@ export function LoginForm({ demoEnabled }: { demoEnabled: boolean }) {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-6 py-10">
-      <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold tracking-tight text-blue-700">
-          KnowFlow <span className="text-slate-400">Ventas</span>
-        </h1>
+      <div className="mb-8 flex flex-col items-center text-center">
+        <Logo variante="completo" ancho={168} priority />
+        <span className="eyebrow mt-3">Ventas</span>
+        <p className="mt-3 font-display text-2xl font-extrabold leading-tight tracking-tight text-abismo">
+          Nadie improvisa{" "}
+          <span className="bg-gradient-to-r from-electro to-flujo bg-clip-text text-transparent">
+            dos veces.
+          </span>
+        </p>
         <p className="mt-2 text-sm text-slate-500">
           Lo que necesitas saber para cerrar la venta, validado.
         </p>

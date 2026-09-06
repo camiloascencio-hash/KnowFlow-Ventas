@@ -1,4 +1,4 @@
-import { asc, count, eq, sql } from "drizzle-orm";
+import { asc, count, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireRole } from "@/lib/session";
 import Aviso from "@/components/Aviso";

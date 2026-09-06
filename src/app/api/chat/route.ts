@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { responderConsulta } from "@/lib/rag";
+import { consumirCuota } from "@/lib/rate-limit";
 
 /**
  * Canal web del agente conversacional (etapa 4).
@@ -19,6 +20,21 @@ export async function POST(req: Request) {
   }
   if (!session.user.cargoId) {
     return NextResponse.json({ error: "Usuario sin cargo" }, { status: 400 });
+  }
+
+  // Cada consulta gasta un embedding y hasta seis llamadas al modelo: el techo
+  // por usuario evita que un bucle del cliente vacie el presupuesto.
+  const cuota = consumirCuota(`chat:${session.user.id}`);
+  if (!cuota.permitido) {
+    return NextResponse.json(
+      {
+        error: `Vas muy rapido. Espera ${cuota.reintentarEnSegundos} segundos y vuelve a preguntar.`,
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(cuota.reintentarEnSegundos) },
+      }
+    );
   }
 
   const { pregunta } = (await req.json()) as { pregunta?: string };

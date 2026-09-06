@@ -8,7 +8,7 @@ export default defineConfig({
     },
   },
   test: {
-    setupFiles: ["dotenv/config"],
+    setupFiles: ["./tests/setup.ts"],
     // El primer test puede descargar el modelo de embeddings local
     testTimeout: 120_000,
     hookTimeout: 120_000,

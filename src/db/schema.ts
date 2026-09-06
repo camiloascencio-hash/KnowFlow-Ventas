@@ -151,14 +151,27 @@ export const unidadesConocimiento = pgTable("unidades_conocimiento", {
   creadoEn: timestamp("creado_en").notNull().defaultNow(),
 });
 
-export const chunks = pgTable("chunks", {
-  id: serial("id").primaryKey(),
-  unidadId: integer("unidad_id")
-    .references(() => unidadesConocimiento.id, { onDelete: "cascade" })
-    .notNull(),
-  texto: text("texto").notNull(),
-  embedding: vector("embedding", { dimensions: EMBEDDING_DIM }).notNull(),
-});
+export const chunks = pgTable(
+  "chunks",
+  {
+    id: serial("id").primaryKey(),
+    unidadId: integer("unidad_id")
+      .references(() => unidadesConocimiento.id, { onDelete: "cascade" })
+      .notNull(),
+    texto: text("texto").notNull(),
+    embedding: vector("embedding", { dimensions: EMBEDDING_DIM }).notNull(),
+  },
+  (t) => [
+    // Sin este indice, CADA pregunta al asistente recorre todos los chunks
+    // calculando distancia coseno de a uno. Con 30 chunks no se nota; con el
+    // catalogo de una cadena real son segundos, con el cliente esperando.
+    index("chunks_embedding_idx").using(
+      "hnsw",
+      t.embedding.op("vector_cosine_ops")
+    ),
+    index("chunks_unidad_idx").on(t.unidadId),
+  ]
+);
 
 export const consultas = pgTable("consultas", {
   id: serial("id").primaryKey(),

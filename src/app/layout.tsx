@@ -1,11 +1,17 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
+import { Outfit, Sora } from "next/font/google";
 import "./globals.css";
-import { APP_VERSION } from "@/lib/app-version";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Outfit para interfaz y texto; Sora para titulares y cifras.
+const outfit = Outfit({
+  variable: "--font-outfit",
   subsets: ["latin"],
+  display: "swap",
+});
+const sora = Sora({
+  variable: "--font-sora",
+  subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -25,15 +31,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${geistSans.variable} h-full antialiased`}>
-      <body className="min-h-dvh bg-slate-50 text-slate-900">
+    <html lang="es" className={`${outfit.variable} ${sora.variable} h-full antialiased`}>
+      <body className="min-h-dvh bg-niebla text-abismo">
         {children}
-        <span
-          aria-label="Versión de KnowFlow Ventas"
-          className="pointer-events-none fixed bottom-2 right-2 select-none text-[10px] text-slate-400"
-        >
-          v{APP_VERSION}
-        </span>
       </body>
     </html>
   );

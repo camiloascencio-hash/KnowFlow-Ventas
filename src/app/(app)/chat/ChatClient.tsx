@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   ArrowRight,
   BookOpen,
-  Bot,
   Check,
   FileText,
   Megaphone,
@@ -19,6 +18,7 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
+import Logo from "@/components/Logo";
 import Markdown from "@/components/Markdown";
 import type { Fuente } from "@/lib/rag";
 import { paraVoz, useReconocimientoVoz, useSintesisVoz } from "./useVoz";
@@ -34,8 +34,6 @@ type Mensaje = {
   error?: boolean;
 };
 
-const DIAS_VERIFICACION = 90;
-
 /**
  * Una fuente no vale lo mismo según de dónde salga: una unidad la escribió y
  * validó una persona; una ficha técnica es un dato duro del catálogo, y ahí
@@ -46,10 +44,6 @@ function FuenteLink({ fuente }: { fuente: Fuente }) {
     "flex items-center gap-1.5 text-xs font-medium transition hover:underline";
 
   if (fuente.tipo === "ficha_tecnica") {
-    const desactualizada =
-      !fuente.verificadoEn ||
-      Date.now() - new Date(fuente.verificadoEn).getTime() >
-        DIAS_VERIFICACION * 86_400_000;
     return (
       <Link
         href={`/catalogo/${fuente.productoId}`}
@@ -57,7 +51,7 @@ function FuenteLink({ fuente }: { fuente: Fuente }) {
       >
         <Smartphone size={13} className="shrink-0" />
         <span>{fuente.etiqueta}</span>
-        {desactualizada && (
+        {fuente.desactualizada && (
           <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">
             sin verificar
           </span>
@@ -93,11 +87,11 @@ const SUGERENCIAS = [
   "¿Cómo funciona el canje de su equipo usado?",
 ];
 
-/** Avatar circular del asistente, junto a cada respuesta. */
+/** Cada respuesta queda firmada con el isotipo: la marca responde, no un bot. */
 function AsistenteAvatar() {
   return (
-    <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-sm">
-      <Bot size={17} />
+    <div className="grid h-8 w-8 shrink-0 place-items-center border border-slate-200 bg-white">
+      <Logo variante="isotipo" ancho={19} />
     </div>
   );
 }

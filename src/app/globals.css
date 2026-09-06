@@ -1,42 +1,138 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/**
+ * Sistema de marca KnowFlow.
+ *
+ * En vez de reescribir clase por clase en doce pantallas, se redefinen las
+ * escalas que la app ya usa (blue / slate / indigo / cyan) con la paleta de
+ * marca. Asi `bg-blue-600` pasa a ser el azul electro de KnowFlow en todas
+ * partes, y cualquier pantalla nueva hereda la marca sin hacer nada.
+ *
+ * Paleta: abismo #04122D · profundo #0D3D82 · electro #0A66E3
+ *         cielo #0fb3f6 · flujo #14d2f3 · acero #7b9cc5 · niebla #F5F5F5
+ */
 @theme inline {
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-outfit);
+  --font-display: var(--font-sora);
+}
+
+@theme {
+  /* --- Marca, por nombre propio --- */
+  --color-abismo: #04122d;
+  --color-profundo: #0d3d82;
+  --color-electro: #0a66e3;
+  --color-cielo: #0fb3f6;
+  --color-flujo: #14d2f3;
+  --color-acero: #7b9cc5;
+  --color-niebla: #f5f5f5;
+  /* Extension minima: la paleta es toda azul y no puede decir "cuidado". */
+  --color-alerta: #f2a20c;
+  --color-critico: #ff4e6a;
+
+  /* --- Azul = estructura y accion --- */
+  --color-blue-50: #eaf4ff;
+  --color-blue-100: #d3e8ff;
+  --color-blue-200: #a9d2fb;
+  --color-blue-300: #6fbef8;
+  --color-blue-400: #2aa7f5;
+  --color-blue-500: #0fb3f6;
+  --color-blue-600: #0a66e3;
+  --color-blue-700: #0d3d82;
+  --color-blue-800: #092c63;
+  --color-blue-900: #061e45;
+  --color-blue-950: #04122d;
+
+  /* --- Neutros con sesgo azul, no grises muertos --- */
+  --color-slate-50: #f5f5f5;
+  --color-slate-100: #eceff4;
+  --color-slate-200: #dde4ef;
+  --color-slate-300: #c2cee0;
+  --color-slate-400: #7b9cc5;
+  --color-slate-500: #5b6b87;
+  --color-slate-600: #46566f;
+  --color-slate-700: #2b3a55;
+  --color-slate-800: #16243d;
+  --color-slate-900: #04122d;
+  --color-slate-950: #020b1c;
+
+  /* --- Cian = dato validado (el guardarrail cumplido) --- */
+  --color-cyan-50: #e6fbff;
+  --color-cyan-100: #c4f5ff;
+  --color-cyan-200: #9deeff;
+  --color-cyan-500: #14d2f3;
+  --color-cyan-600: #0a8fc4;
+  --color-cyan-700: #0d6a93;
+
+  /* --- Indigo se alinea al azul de marca --- */
+  --color-indigo-50: #eaf4ff;
+  --color-indigo-100: #d3e8ff;
+  --color-indigo-200: #a9d2fb;
+  --color-indigo-500: #0a66e3;
+  --color-indigo-600: #0a66e3;
+  --color-indigo-700: #0d3d82;
+  --color-indigo-800: #092c63;
+  --color-indigo-900: #061e45;
+
+  /* --- Ambar: unico aviso "revisa esto" --- */
+  --color-amber-50: #fdf6e7;
+  --color-amber-100: #fbecc9;
+  --color-amber-200: #f5d896;
+  --color-amber-300: #efc35d;
+  --color-amber-500: #f2a20c;
+  --color-amber-600: #d18a06;
+  --color-amber-700: #a36f06;
+  --color-amber-800: #8a5b06;
+  --color-amber-900: #6d4705;
+
+  /* --- Esquinas: rectas, con redondeo minimo --- */
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+  --radius-2xl: 8px;
+  --radius-3xl: 10px;
 }
 
 body {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
-/* Aparición suave de cada mensaje del chat */
+/* Los titulares llevan la geometrica, en toda la app sin tocar cada archivo */
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
+  letter-spacing: -0.03em;
+}
+
+/* Etiqueta de seccion: versalita ancha, el recurso que ordena las pantallas */
+.eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+  color: var(--color-electro);
+}
+
+/* Aparicion suave de cada mensaje del chat */
 @keyframes message-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 .animate-message-in {
   animation: message-in 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Puntos del indicador "escribiendo…" */
+/* Puntos del indicador "escribiendo..." */
 @keyframes typing-bounce {
-  0%,
-  80%,
-  100% {
-    transform: translateY(0);
-    opacity: 0.35;
-  }
-  40% {
-    transform: translateY(-4px);
-    opacity: 1;
-  }
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.35; }
+  40%           { transform: translateY(-4px); opacity: 1; }
 }
 .typing-dot {
   animation: typing-bounce 1.2s infinite ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-message-in,
+  .typing-dot { animation: none; }
 }

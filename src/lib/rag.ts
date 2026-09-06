@@ -29,6 +29,7 @@ import {
   pideElPrecio,
   resolverPrecio,
   tokensSinCubrir,
+  verificacionVencida,
 } from "@/lib/catalogo";
 import {
   candidatosParaAgente,
@@ -69,6 +70,8 @@ export type Fuente = {
   unidadId?: number;
   productoId?: number;
   verificadoEn?: Date | null;
+  /** Ya resuelto en el servidor: el cliente no debe mirar el reloj al pintar. */
+  desactualizada?: boolean;
 };
 
 export type RespuestaRag = {
@@ -315,6 +318,7 @@ function fuenteDeFicha(producto: {
     etiqueta: etiquetaFicha(producto),
     productoId: producto.id,
     verificadoEn: producto.verificadoEn,
+    desactualizada: verificacionVencida(producto.verificadoEn),
   };
 }
 

@@ -125,7 +125,7 @@ export function resolverProductoEntre(
 
   // 1) Coincidencia exacta, empezando por el n-grama más largo.
   let largoActual = candidatas[0].largo;
-  let exactos: Producto[] = [];
+  const exactos: Producto[] = [];
   for (const { clave: c, largo } of candidatas) {
     if (largo !== largoActual && exactos.length > 0) break;
     largoActual = largo;
