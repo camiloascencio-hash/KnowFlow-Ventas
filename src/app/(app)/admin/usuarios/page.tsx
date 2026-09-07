@@ -2,10 +2,12 @@ import { asc } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireRole } from "@/lib/session";
 import Aviso from "@/components/Aviso";
+import { MailCheck, MailWarning } from "lucide-react";
 import {
   actualizarUsuarioAction,
   crearUsuarioAction,
   eliminarUsuarioAction,
+  reenviarVerificacionAction,
   resetPasswordAction,
 } from "@/app/actions/admin";
 
@@ -102,7 +104,8 @@ export default async function UsuariosAdminPage({
               className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-base outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
             <span className="mt-1 block text-xs font-normal text-slate-400">
-              La persona la usará para su primer ingreso.
+              Clave temporal: la persona no podrá ingresar hasta confirmar su
+              correo desde el enlace que le enviaremos.
             </span>
           </label>
 
@@ -197,6 +200,15 @@ export default async function UsuariosAdminPage({
                     <span className="rounded-full bg-slate-50 px-2.5 py-0.5 text-xs text-slate-500">
                       {u.cargoId ? nombreCargo.get(u.cargoId) : "sin cargo"}
                     </span>
+                    {u.emailVerificadoEn ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-cyan-50 px-2.5 py-0.5 text-xs font-medium text-cyan-700 ring-1 ring-cyan-200">
+                        <MailCheck size={11} /> Confirmado
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-amber-200">
+                        <MailWarning size={11} /> Sin confirmar
+                      </span>
+                    )}
                   </div>
                 </summary>
 
@@ -256,6 +268,19 @@ export default async function UsuariosAdminPage({
                     Cambiar
                   </button>
                 </form>
+
+                {/* Reenviar invitación */}
+                {!u.emailVerificadoEn && (
+                  <form
+                    action={reenviarVerificacionAction}
+                    className="mt-3 border-t border-slate-100 pt-3"
+                  >
+                    <input type="hidden" name="id" value={u.id} />
+                    <button className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100">
+                      <MailWarning size={13} /> Reenviar invitación de confirmación
+                    </button>
+                  </form>
+                )}
 
                 {/* Eliminar */}
                 {!esYo && (

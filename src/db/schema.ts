@@ -127,6 +127,14 @@ export const usuarios = pgTable("usuarios", {
   passwordHash: text("password_hash").notNull(),
   rol: rolEnum("rol").notNull(),
   cargoId: integer("cargo_id").references(() => cargos.id),
+  // Verificación de correo: el admin fija una clave temporal, pero la
+  // persona no puede entrar hasta confirmar que esa dirección es suya.
+  // null = pendiente; con fecha = confirmada.
+  emailVerificadoEn: timestamp("email_verificado_en"),
+  // Hash del token de confirmación (nunca el token en claro: si la base se
+  // filtra, no debe alcanzar para activar una cuenta ajena).
+  tokenVerificacionHash: text("token_verificacion_hash"),
+  tokenVerificacionExpira: timestamp("token_verificacion_expira"),
 });
 
 export const unidadesConocimiento = pgTable("unidades_conocimiento", {

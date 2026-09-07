@@ -36,10 +36,10 @@ async function main() {
     const [cargo] = await db.insert(schema.cargos).values({ nombre: "Vendedor de tecnología Samsung", descripcion: "DATOS SINTÉTICOS — venta asistida de smartphones, tablets y wearables en tiendas de retail en Chile." }).returning();
     const passwordHash = await hash("demo123", ARGON_OPTIONS);
     const [vendedor, experto, validador] = await db.insert(schema.usuarios).values([
-      { nombre: "Matías Herrera", email: "vendedor@knowflow.cl", passwordHash, rol: "trabajador_nuevo", cargoId: cargo.id },
-      { nombre: "Daniela Cortés", email: "experto@knowflow.cl", passwordHash, rol: "experto", cargoId: cargo.id },
-      { nombre: "Rodrigo Salas", email: "validador@knowflow.cl", passwordHash, rol: "validador", cargoId: cargo.id },
-      { nombre: "Fernanda Lagos", email: "admin@knowflow.cl", passwordHash, rol: "admin", cargoId: cargo.id },
+      { nombre: "Matías Herrera", email: "vendedor@knowflow.cl", passwordHash, rol: "trabajador_nuevo", cargoId: cargo.id, emailVerificadoEn: new Date() },
+      { nombre: "Daniela Cortés", email: "experto@knowflow.cl", passwordHash, rol: "experto", cargoId: cargo.id, emailVerificadoEn: new Date() },
+      { nombre: "Rodrigo Salas", email: "validador@knowflow.cl", passwordHash, rol: "validador", cargoId: cargo.id, emailVerificadoEn: new Date() },
+      { nombre: "Fernanda Lagos", email: "admin@knowflow.cl", passwordHash, rol: "admin", cargoId: cargo.id, emailVerificadoEn: new Date() },
     ]).returning();
     const unidadIdPorTitulo = new Map<string, number>(); const filasChunks: { unidadId: number; texto: string }[] = [];
     for (const unidadSeed of unidadesSeed) {

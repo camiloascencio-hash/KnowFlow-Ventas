@@ -1,54 +1,25 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { eq } from "drizzle-orm";
-import { createHash, timingSafeEqual } from "crypto";
-import { hash, verify } from "@node-rs/argon2";
 import { db, schema } from "@/db";
+import {
+  CODIGO_CUENTA_SIN_VERIFICAR,
+  hashPassword,
+  verifyStoredPassword,
+} from "@/lib/auth-core";
 
-const ARGON_OPTIONS = {
-  algorithm: 2,
-  memoryCost: 19 * 1024,
-  timeCost: 2,
-  parallelism: 1,
-};
-
-export function hashPassword(password: string): Promise<string> {
-  return hash(password, ARGON_OPTIONS);
-}
-
-export function verifyPassword(password: string, passwordHash: string): Promise<boolean> {
-  return verify(passwordHash, password, ARGON_OPTIONS);
-}
-
-function legacyHashPassword(password: string): string {
-  return createHash("sha256").update(password).digest("hex");
-}
-
-/**
- * Accepts the hashes created by the original MVP once, then upgrades them on
- * successful login. This keeps the deployed demo usable while Neon is migrated.
- */
-export async function verifyStoredPassword(
-  password: string,
-  passwordHash: string
-): Promise<{ valid: boolean; needsUpgrade: boolean }> {
-  if (passwordHash.startsWith("$argon2")) {
-    return { valid: await verifyPassword(password, passwordHash), needsUpgrade: false };
-  }
-
-  if (!/^[a-f0-9]{64}$/i.test(passwordHash)) {
-    return { valid: false, needsUpgrade: false };
-  }
-
-  const expected = Buffer.from(legacyHashPassword(password), "utf8");
-  const stored = Buffer.from(passwordHash, "utf8");
-  return {
-    valid: timingSafeEqual(expected, stored),
-    needsUpgrade: true,
-  };
-}
+// Reexportadas para no romper a quien ya las importaba desde "@/auth".
+export { hashPassword, verifyPassword, verifyStoredPassword } from "@/lib/auth-core";
 
 export type Rol = "trabajador_nuevo" | "experto" | "validador" | "admin";
+
+/**
+ * Error distinguible del "credenciales incorrectas" genérico: la contraseña
+ * era correcta, pero la cuenta todavía no confirmó su correo.
+ */
+export class CuentaSinVerificarError extends CredentialsSignin {
+  code = CODIGO_CUENTA_SIN_VERIFICAR;
+}
 
 declare module "next-auth" {
   interface Session {
@@ -89,6 +60,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const passwordResult = await verifyStoredPassword(password, user.passwordHash);
         if (!passwordResult.valid) return null;
+
+        if (!user.emailVerificadoEn) {
+          throw new CuentaSinVerificarError();
+        }
 
         if (passwordResult.needsUpgrade) {
           await db

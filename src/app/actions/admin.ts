@@ -6,6 +6,11 @@ import { and, count, eq, ne } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { hashPassword, type Rol } from "@/auth";
 import { requireRole } from "@/lib/session";
+import { consumirCuota } from "@/lib/rate-limit";
+import {
+  enviarCorreoVerificacion,
+  generarTokenVerificacion,
+} from "@/lib/verificacion";
 
 const ROLES: Rol[] = ["trabajador_nuevo", "experto", "validador", "admin"];
 
@@ -143,15 +148,78 @@ export async function crearUsuarioAction(formData: FormData) {
     volver("/admin/usuarios", { error: `Ya existe un usuario con ${email}.` });
   }
 
+  const { token, hash, expira } = generarTokenVerificacion();
+
   await db.insert(schema.usuarios).values({
     nombre,
     email,
     passwordHash: await hashPassword(password),
     rol,
     cargoId,
+    tokenVerificacionHash: hash,
+    tokenVerificacionExpira: expira,
   });
 
-  volver("/admin/usuarios", { ok: `Usuario ${email} creado.` });
+  const envio = await enviarCorreoVerificacion({ nombre, email }, token);
+
+  if (envio.enviado) {
+    volver("/admin/usuarios", {
+      ok: `Usuario ${email} creado. Le enviamos un correo para confirmar su cuenta.`,
+    });
+  } else {
+    volver("/admin/usuarios", {
+      ok: `Usuario ${email} creado, pero no hay proveedor de correo configurado. Enlace de confirmación (válido 48 h): ${new URL(
+        `/verificar?token=${token}`,
+        process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3100"
+      ).toString()}`,
+    });
+  }
+}
+
+/**
+ * Admin: reenvía la invitación de confirmación (invalida el enlace anterior).
+ * Con techo de envíos: reenviar sin límite sería spamear la bandeja de otro.
+ */
+export async function reenviarVerificacionAction(formData: FormData) {
+  await requireRole("admin");
+  const id = Number(formData.get("id"));
+
+  const [usuario] = await db
+    .select()
+    .from(schema.usuarios)
+    .where(eq(schema.usuarios.id, id))
+    .limit(1);
+  if (!usuario) volver("/admin/usuarios", { error: "Usuario no encontrado." });
+
+  if (usuario.emailVerificadoEn) {
+    volver("/admin/usuarios", { error: "Esa cuenta ya está confirmada." });
+  }
+
+  const cuota = consumirCuota(`reenviar-verificacion:${id}`, 3, 3600_000);
+  if (!cuota.permitido) {
+    volver("/admin/usuarios", {
+      error: `Ya se reenvió varias veces. Espera ${Math.ceil(cuota.reintentarEnSegundos / 60)} min antes de reintentar.`,
+    });
+  }
+
+  const { token, hash, expira } = generarTokenVerificacion();
+  await db
+    .update(schema.usuarios)
+    .set({ tokenVerificacionHash: hash, tokenVerificacionExpira: expira })
+    .where(eq(schema.usuarios.id, id));
+
+  const envio = await enviarCorreoVerificacion(usuario, token);
+
+  if (envio.enviado) {
+    volver("/admin/usuarios", { ok: `Invitación reenviada a ${usuario.email}.` });
+  } else {
+    volver("/admin/usuarios", {
+      ok: `Sin proveedor de correo configurado. Enlace (válido 48 h): ${new URL(
+        `/verificar?token=${token}`,
+        process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3100"
+      ).toString()}`,
+    });
+  }
 }
 
 /**

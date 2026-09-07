@@ -12,15 +12,23 @@ const DEMO_USERS = [
   { email: "admin@knowflow.cl", label: "Jefatura comercial" },
 ];
 
-export function LoginForm({ demoEnabled }: { demoEnabled: boolean }) {
+export function LoginForm({
+  demoEnabled,
+  okInicial,
+}: {
+  demoEnabled: boolean;
+  okInicial?: string;
+}) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(okInicial ?? null);
   const [loadingEmail, setLoadingEmail] = useState<string | null>(null);
 
   async function attemptSignIn(selectedEmail: string, selectedPassword: string) {
     setError(null);
+    setOk(null);
     setLoadingEmail(selectedEmail);
 
     try {
@@ -29,6 +37,13 @@ export function LoginForm({ demoEnabled }: { demoEnabled: boolean }) {
         password: selectedPassword,
         redirect: false,
       });
+
+      if (response?.code === "cuenta_sin_verificar") {
+        setError(
+          "Tu contraseña es correcta, pero la cuenta aún no confirma su correo. Revisa tu bandeja de entrada o pide a tu administrador que reenvíe la invitación."
+        );
+        return;
+      }
 
       if (response?.error) {
         setError("Credenciales incorrectas. Intenta de nuevo.");
@@ -103,6 +118,9 @@ export function LoginForm({ demoEnabled }: { demoEnabled: boolean }) {
           />
         </label>
 
+        {ok && (
+          <p className="mt-3 rounded-lg bg-cyan-50 px-3 py-2 text-sm text-cyan-700">{ok}</p>
+        )}
         {error && (
           <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
         )}

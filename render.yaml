@@ -46,3 +46,10 @@ services:
       # Opcional: con ella el chat redacta con Claude; sin ella, modo demo
       - key: ANTHROPIC_API_KEY
         sync: false
+      # Opcional: con ella los correos de confirmacion de cuenta se envian de
+      # verdad (resend.com, plan free). Sin ella, el enlace de confirmacion
+      # se muestra en el aviso del admin al crear el usuario.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
+        value: "KnowFlow <onboarding@resend.dev>"
