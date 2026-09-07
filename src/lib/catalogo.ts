@@ -535,6 +535,15 @@ export function productosPorIds(ids: number[]): Promise<Producto[]> {
     .where(inArray(schema.productos.id, ids));
 }
 
+/** Productos por modelo EXACTO (para resolver `productosRelacionados` del glosario). */
+export function productosPorModelos(modelos: string[]): Promise<Producto[]> {
+  if (modelos.length === 0) return Promise.resolve([]);
+  return db
+    .select()
+    .from(schema.productos)
+    .where(inArray(schema.productos.modelo, modelos));
+}
+
 // --- Camino rápido: ¿esta pregunta se responde con la tabla? -----------------
 
 /** Palabras que delatan una pregunta por dato duro y no por argumentario. */

@@ -1,14 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { setUnidadLeida, useUnidadesLeidas } from "@/lib/useProgresoTurnos";
+import { useState, useTransition } from "react";
+import { confirmarLecturaAction } from "@/app/actions/onboarding";
 
 interface ConfirmacionLecturaProps {
   unidadId: number;
+  confirmadaInicial: boolean;
 }
 
-export function ConfirmacionLectura({ unidadId }: ConfirmacionLecturaProps) {
-  const confirmada = useUnidadesLeidas().includes(unidadId);
+export function ConfirmacionLectura({
+  unidadId,
+  confirmadaInicial,
+}: ConfirmacionLecturaProps) {
+  const [confirmada, setConfirmada] = useState(confirmadaInicial);
+  const [pending, startTransition] = useTransition();
+
+  function alternar(valor: boolean) {
+    setConfirmada(valor); // optimista: se siente instantáneo
+    startTransition(async () => {
+      try {
+        await confirmarLecturaAction(unidadId, valor);
+      } catch {
+        setConfirmada(!valor); // el servidor manda: revierte si falló
+      }
+    });
+  }
 
   return (
     <section
@@ -23,7 +40,8 @@ export function ConfirmacionLectura({ unidadId }: ConfirmacionLecturaProps) {
         <input
           type="checkbox"
           checked={confirmada}
-          onChange={(event) => setUnidadLeida(unidadId, event.target.checked)}
+          disabled={pending}
+          onChange={(event) => alternar(event.target.checked)}
           className="mt-0.5 h-5 w-5 shrink-0 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
         />
         <span>

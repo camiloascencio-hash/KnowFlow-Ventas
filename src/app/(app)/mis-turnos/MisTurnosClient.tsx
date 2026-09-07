@@ -1,13 +1,16 @@
-"use client";
-
 import Link from "next/link";
 import { TipoBadge } from "@/components/Badges";
-import { useUnidadesLeidas } from "@/lib/useProgresoTurnos";
 
 type Item = { id: number; titulo: string; tipo: string };
 
-export default function MisTurnosClient({ unidades }: { unidades: Item[] }) {
-  const vistas = useUnidadesLeidas();
+export default function MisTurnosClient({
+  unidades,
+  leidasIniciales,
+}: {
+  unidades: Item[];
+  leidasIniciales: number[];
+}) {
+  const vistas = leidasIniciales;
   const completadas = unidades.filter((unidad) =>
     vistas.includes(unidad.id)
   ).length;
@@ -35,6 +38,11 @@ export default function MisTurnosClient({ unidades }: { unidades: Item[] }) {
             style={{ width: `${progreso}%` }}
           />
         </div>
+        {progreso === 100 && unidades.length > 0 && (
+          <p className="mt-2 text-xs font-medium text-emerald-700">
+            🎉 Completaste todos los temas críticos de tu cargo.
+          </p>
+        )}
       </div>
 
       <ul className="mt-4 space-y-3">

@@ -26,7 +26,9 @@ import {
   explicarTecnicismo,
   filtrarEspecificaciones,
   construirFilas,
+  glosarioParaTextos,
   pideElPrecio,
+  productosPorModelos,
   resolverPrecio,
   tokensSinCubrir,
   verificacionVencida,
@@ -72,13 +74,20 @@ export type Fuente = {
   verificadoEn?: Date | null;
   /** Ya resuelto en el servidor: el cliente no debe mirar el reloj al pintar. */
   desactualizada?: boolean;
+  /** Solo en glosario: para derivar recomendaciones sin una consulta extra. */
+  glosarioId?: number;
+  productosRelacionados?: string[];
 };
+
+/** Misma forma que una fuente: recomendar es "esto también te puede servir". */
+export type Recomendacion = Fuente;
 
 export type RespuestaRag = {
   consultaId: number;
   respuesta: string;
   resuelta: boolean;
   fuentes: Fuente[];
+  recomendaciones: Recomendacion[];
   demo: boolean;
 };
 
@@ -179,6 +188,7 @@ async function registrar(params: {
   chunksUsados?: number[];
   embedding?: number[] | null;
   fuentes: Fuente[];
+  recomendaciones?: Recomendacion[];
   demo: boolean;
 }): Promise<RespuestaRag> {
   const [consulta] = await db
@@ -200,6 +210,7 @@ async function registrar(params: {
     respuesta: params.respuesta,
     resuelta: params.resuelta,
     fuentes: params.fuentes,
+    recomendaciones: params.recomendaciones ?? [],
     demo: params.demo,
   };
 }
@@ -242,6 +253,7 @@ async function intentarCaminoDeFicha(params: {
     ];
     if (tokensSinCubrir(pregunta, cubierto).length > 0) return null;
 
+    const fuenteFicha = fuenteDeFicha(producto);
     return registrar({
       ...params,
       respuesta: renderFicha(
@@ -249,7 +261,8 @@ async function intentarCaminoDeFicha(params: {
         { incluirPrecio: quierePrecio }
       ),
       resuelta: true,
-      fuentes: [fuenteDeFicha(producto)],
+      fuentes: [fuenteFicha],
+      recomendaciones: await recomendarDesdeCatalogo([fuenteFicha]),
       demo,
     });
   }
@@ -277,6 +290,7 @@ async function intentarCaminoDeFicha(params: {
     ];
     if (tokensSinCubrir(pregunta, cubierto).length > 0) return null;
 
+    const fuentesComparacion = [fuenteDeFicha(productoA), fuenteDeFicha(productoB)];
     return registrar({
       ...params,
       respuesta: renderComparacion(
@@ -286,7 +300,8 @@ async function intentarCaminoDeFicha(params: {
         quierePrecio ? { a: precioA, b: precioB } : undefined
       ),
       resuelta: true,
-      fuentes: [fuenteDeFicha(productoA), fuenteDeFicha(productoB)],
+      fuentes: fuentesComparacion,
+      recomendaciones: await recomendarDesdeCatalogo(fuentesComparacion),
       demo,
     });
   }
@@ -296,11 +311,18 @@ async function intentarCaminoDeFicha(params: {
     const cubierto = [t.termino, ...t.aliases, t.traduccionVenta];
     if (tokensSinCubrir(pregunta, cubierto).length > 0) return null;
 
+    const fuenteGlosario: Fuente = {
+      tipo: "glosario",
+      etiqueta: `Glosario — ${t.termino}`,
+      glosarioId: t.id,
+      productosRelacionados: t.productosRelacionados,
+    };
     return registrar({
       ...params,
       respuesta: renderTecnicismo(t),
       resuelta: true,
-      fuentes: [{ tipo: "glosario", etiqueta: `Glosario — ${t.termino}` }],
+      fuentes: [fuenteGlosario],
+      recomendaciones: await recomendarDesdeCatalogo([fuenteGlosario]),
       demo,
     });
   }
@@ -320,6 +342,124 @@ function fuenteDeFicha(producto: {
     verificadoEn: producto.verificadoEn,
     desactualizada: verificacionVencida(producto.verificadoEn),
   };
+}
+
+const RECOM_LIMITE = 2;
+
+/**
+ * Recomendaciones SIN embedding, cruzando lo ya citado por relación
+ * estructural del catálogo — nunca dispara una llamada nueva a Gemini, para
+ * no perder la latencia de <1s que es todo el punto del camino rápido:
+ *  - Cité una ficha → sugiero los tecnicismos que aparecen en sus specs
+ *    (el mismo `glosarioParaTextos` que usa la página de ficha).
+ *  - Cité un término del glosario → sugiero sus `productosRelacionados`.
+ */
+async function recomendarDesdeCatalogo(
+  fuentesCitadas: Fuente[]
+): Promise<Recomendacion[]> {
+  const idsProductoCitados = new Set(
+    fuentesCitadas.map((f) => f.productoId).filter((id): id is number => !!id)
+  );
+  const idsGlosarioCitados = new Set(
+    fuentesCitadas.map((f) => f.glosarioId).filter((id): id is number => !!id)
+  );
+
+  const [productosRecomendados, terminosRecomendados] = await Promise.all([
+    (async () => {
+      const modelos = new Set<string>();
+      for (const f of fuentesCitadas) {
+        if (f.tipo === "glosario") {
+          for (const m of f.productosRelacionados ?? []) modelos.add(m);
+        }
+      }
+      if (modelos.size === 0) return [];
+      const productos = await productosPorModelos([...modelos]);
+      return productos
+        .filter((p) => !idsProductoCitados.has(p.id))
+        .map((p) => fuenteDeFicha(p));
+    })(),
+    (async () => {
+      const idsFicha = [...idsProductoCitados];
+      if (idsFicha.length === 0) return [];
+      const specsPorProducto = await Promise.all(
+        idsFicha.map((id) => especificacionesDe(id))
+      );
+      const textos = specsPorProducto
+        .flat()
+        .map((s) => `${s.clave} ${s.valor}`);
+      const terminos = await glosarioParaTextos(textos);
+      return terminos
+        .filter((t) => !idsGlosarioCitados.has(t.id))
+        .map(
+          (t): Fuente => ({
+            tipo: "glosario",
+            etiqueta: `Glosario — ${t.termino}`,
+            glosarioId: t.id,
+            productosRelacionados: t.productosRelacionados,
+          })
+        );
+    })(),
+  ]);
+
+  return [...productosRecomendados, ...terminosRecomendados].slice(
+    0,
+    RECOM_LIMITE
+  );
+}
+
+// Umbral más laxo que el de la respuesta principal: una recomendación no
+// necesita "resolver" la pregunta, solo ser del mismo tema.
+const RECOM_THRESHOLD = Math.max(0.5, THRESHOLD - 0.1);
+
+/**
+ * Hasta dos unidades publicadas del mismo cargo, cercanas a la pregunta pero
+ * NO citadas ya en la respuesta. Reutiliza el embedding ya calculado — nunca
+ * dispara una llamada nueva solo para recomendar.
+ */
+async function recomendarUnidades(
+  cargoId: number,
+  qEmbedding: number[],
+  excluirUnidadIds: number[]
+): Promise<Recomendacion[]> {
+  const similitud = sql<number>`1 - (${cosineDistance(
+    schema.chunks.embedding,
+    qEmbedding
+  )})`;
+
+  const filas = await db
+    .select({
+      unidadId: schema.unidadesConocimiento.id,
+      titulo: schema.unidadesConocimiento.titulo,
+      similitud,
+    })
+    .from(schema.chunks)
+    .innerJoin(
+      schema.unidadesConocimiento,
+      eq(schema.chunks.unidadId, schema.unidadesConocimiento.id)
+    )
+    .where(
+      and(
+        eq(schema.unidadesConocimiento.estado, "publicado"),
+        eq(schema.unidadesConocimiento.cargoId, cargoId)
+      )
+    )
+    .orderBy(desc(similitud))
+    .limit(20);
+
+  const vistos = new Set(excluirUnidadIds);
+  const resultado: Recomendacion[] = [];
+  for (const f of filas) {
+    if (f.similitud < RECOM_THRESHOLD) break; // viene ordenado desc
+    if (vistos.has(f.unidadId)) continue;
+    vistos.add(f.unidadId);
+    resultado.push({
+      tipo: "unidad",
+      etiqueta: f.titulo,
+      unidadId: f.unidadId,
+    });
+    if (resultado.length >= RECOM_LIMITE) break;
+  }
+  return resultado;
 }
 
 // --- Herramientas del agente recuperador ------------------------------------
@@ -612,6 +752,8 @@ async function explorarConHerramientas(
           catalogo.fuentes.set(`g${fila.id}`, {
             tipo: "glosario",
             etiqueta: `Glosario — ${fila.termino}`,
+            glosarioId: fila.id,
+            productosRelacionados: fila.productosRelacionados,
           });
           resultados.push({
             type: "tool_result",
@@ -685,6 +827,15 @@ async function responderConAgente(
     ? [...fuentesUnicas(relevantes), ...catalogo.fuentes.values()]
     : [];
 
+  let recomendaciones: Recomendacion[] = [];
+  if (resuelta) {
+    const [porCatalogo, porUnidad] = await Promise.all([
+      recomendarDesdeCatalogo(fuentes),
+      recomendarUnidades(cargoId, qEmbedding, relevantes.map((c) => c.unidadId)),
+    ]);
+    recomendaciones = [...porCatalogo, ...porUnidad].slice(0, RECOM_LIMITE);
+  }
+
   return registrar({
     usuarioId,
     cargoId,
@@ -695,6 +846,7 @@ async function responderConAgente(
     chunksUsados: relevantes.map((c) => c.chunkId),
     embedding: qEmbedding,
     fuentes,
+    recomendaciones,
     demo: false,
   });
 }
@@ -727,6 +879,7 @@ async function responderDemo(
       respuesta: RESPUESTA_SIN_COBERTURA,
       resuelta: false,
       fuentes: [],
+      recomendaciones: [],
       demo: true,
     };
   }
@@ -755,6 +908,11 @@ async function responderDemo(
     respuesta,
     resuelta: true,
     fuentes: fuentesUnicas(relevantes),
+    recomendaciones: await recomendarUnidades(
+      cargoId,
+      qEmbedding,
+      relevantes.map((c) => c.unidadId)
+    ),
     demo: true,
   };
 }

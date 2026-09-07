@@ -6,6 +6,7 @@ import { signOut } from "next-auth/react";
 import {
   BookOpen,
   ClipboardCheck,
+  History,
   LayoutDashboard,
   type LucideIcon,
   MessageSquare,
@@ -36,6 +37,7 @@ const NAV_BY_ROL: Record<Rol, NavItem[]> = {
     { href: "/chat", label: "Asistente", Icon: MessageSquare },
     CATALOGO,
     { href: "/mis-turnos", label: "Mis ventas", Icon: Target },
+    { href: "/mi-historial", label: "Historial", Icon: History },
   ],
   experto: [
     { href: "/experto/unidades", label: "Conocimiento", Icon: BookOpen },

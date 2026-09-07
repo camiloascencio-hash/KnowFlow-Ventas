@@ -7,6 +7,7 @@ import {
   BookOpen,
   Check,
   FileText,
+  Lightbulb,
   Megaphone,
   Mic,
   Send,
@@ -28,6 +29,7 @@ type Mensaje = {
   texto: string;
   consultaId?: number;
   fuentes?: Fuente[];
+  recomendaciones?: Fuente[];
   resuelta?: boolean;
   rating?: "up" | "down";
   escalada?: boolean;
@@ -39,6 +41,14 @@ type Mensaje = {
  * validó una persona; una ficha técnica es un dato duro del catálogo, y ahí
  * lo que importa es hace cuánto se verificó.
  */
+/** Redacta la pregunta que dispara el chip de recomendación, según su tipo. */
+function preguntaPara(r: Fuente): string {
+  const nombre = r.etiqueta.replace(/^(Ficha oficial|Glosario) — /, "");
+  if (r.tipo === "ficha_tecnica") return `Cuéntame sobre el ${nombre}`;
+  if (r.tipo === "glosario") return `¿Qué es ${nombre}?`;
+  return `Cuéntame sobre: ${nombre}`;
+}
+
 function FuenteLink({ fuente }: { fuente: Fuente }) {
   const base =
     "flex items-center gap-1.5 text-xs font-medium transition hover:underline";
@@ -162,6 +172,7 @@ export default function ChatClient({ nombre }: { nombre: string }) {
             texto: data.respuesta,
             consultaId: data.consultaId,
             fuentes: data.fuentes,
+            recomendaciones: data.recomendaciones,
             resuelta: data.resuelta,
           },
         ];
@@ -297,6 +308,27 @@ export default function ChatClient({ nombre }: { nombre: string }) {
                     {m.fuentes.map((f) => (
                       <FuenteLink key={`${f.tipo}-${f.etiqueta}`} fuente={f} />
                     ))}
+                  </div>
+                )}
+
+                {m.recomendaciones && m.recomendaciones.length > 0 && (
+                  <div className="mt-2.5 border-t border-slate-100 pt-2.5">
+                    <p className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
+                      <Lightbulb size={13} className="shrink-0" />
+                      También te puede servir
+                    </p>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {m.recomendaciones.map((r) => (
+                        <button
+                          key={`${r.tipo}-${r.etiqueta}`}
+                          type="button"
+                          onClick={() => enviar(preguntaPara(r))}
+                          className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 transition hover:bg-blue-100"
+                        >
+                          {r.etiqueta.replace(/^(Ficha oficial|Glosario) — /, "")}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
 

@@ -135,7 +135,41 @@ export const usuarios = pgTable("usuarios", {
   // filtra, no debe alcanzar para activar una cuenta ajena).
   tokenVerificacionHash: text("token_verificacion_hash"),
   tokenVerificacionExpira: timestamp("token_verificacion_expira"),
+  creadoEn: timestamp("creado_en").notNull().defaultNow(),
+  // Se fija UNA vez, cuando el trabajador confirma la lectura de todas las
+  // unidades críticas de su cargo. No se vuelve a null si luego desmarca
+  // alguna: el hito ya ocurrió y el dato historico no debe moverse bajo los
+  // pies de un reporte ya emitido.
+  autonomiaAlcanzadaEn: timestamp("autonomia_alcanzada_en"),
 });
+
+/**
+ * Lectura confirmada de una unidad crítica por un trabajador nuevo.
+ *
+ * Reemplaza el localStorage original: vivir solo en el navegador significaba
+ * que el progreso se perdía al cambiar de equipo y que "tiempo a autonomía"
+ * era, literalmente, imposible de medir. Ahora es un hecho con timestamp real
+ * en el servidor — la fuente de verdad para cualquier métrica de onboarding.
+ */
+export const lecturasConfirmadas = pgTable(
+  "lecturas_confirmadas",
+  {
+    id: serial("id").primaryKey(),
+    usuarioId: integer("usuario_id")
+      .references(() => usuarios.id, { onDelete: "cascade" })
+      .notNull(),
+    unidadId: integer("unidad_id")
+      .references(() => unidadesConocimiento.id, { onDelete: "cascade" })
+      .notNull(),
+    confirmadoEn: timestamp("confirmado_en").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("lecturas_confirmadas_usuario_unidad_idx").on(
+      t.usuarioId,
+      t.unidadId
+    ),
+  ]
+);
 
 export const unidadesConocimiento = pgTable("unidades_conocimiento", {
   id: serial("id").primaryKey(),

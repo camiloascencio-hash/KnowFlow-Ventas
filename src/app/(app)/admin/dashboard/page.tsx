@@ -7,6 +7,7 @@ import {
   topTemasConsultados,
   SLA_HORAS,
 } from "@/lib/brechas";
+import { resumenAutonomia } from "@/lib/onboarding";
 import {
   cambiarEstadoBrechaAction,
   redactarBorradorAction,
@@ -40,9 +41,10 @@ export default async function DashboardPage({
   // Detección automática en cada carga (sin cron en el MVP)
   await detectarBrechas(cargoId);
 
-  const [metricas, temas, brechas, cargo, fuentesCount, divergenciasCount, publicadasCount] = await Promise.all([
+  const [metricas, temas, autonomia, brechas, cargo, fuentesCount, divergenciasCount, publicadasCount] = await Promise.all([
     metricasAgregadas(cargoId),
     topTemasConsultados(cargoId),
+    resumenAutonomia(cargoId),
     db
       .select()
       .from(schema.brechas)
@@ -121,6 +123,65 @@ export default async function DashboardPage({
             <p className="text-sm text-slate-400">Sin consultas registradas.</p>
           )}
         </div>
+      </section>
+
+      {/* Tiempo a autonomía */}
+      <section className="mt-5 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+        <h2 className="text-sm font-semibold text-slate-700">
+          Tiempo a autonomía
+        </h2>
+        <p className="mt-0.5 text-xs text-slate-400">
+          Días desde que se crea la cuenta hasta que el vendedor confirma
+          haber leído todos los temas críticos de su cargo. Agregado — nunca
+          se muestra el detalle de una persona.
+        </p>
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <div className="rounded-xl bg-slate-50 p-3 text-center">
+            <p className="text-xl font-bold text-slate-800">
+              {autonomia.medianaDias ?? "—"}
+            </p>
+            <p className="mt-0.5 text-[11px] text-slate-500">
+              Mediana (días)
+            </p>
+          </div>
+          <div className="rounded-xl bg-slate-50 p-3 text-center">
+            <p className="text-xl font-bold text-slate-800">
+              {autonomia.promedioDias ?? "—"}
+            </p>
+            <p className="mt-0.5 text-[11px] text-slate-500">
+              Promedio (días)
+            </p>
+          </div>
+          <div className="rounded-xl bg-slate-50 p-3 text-center">
+            <p className="text-xl font-bold text-emerald-700">
+              {autonomia.completados}
+            </p>
+            <p className="mt-0.5 text-[11px] text-slate-500">
+              Alcanzaron autonomía
+            </p>
+          </div>
+        </div>
+        {autonomia.enProgreso.some((b) => b.n > 0) && (
+          <div className="mt-3 border-t border-slate-100 pt-3">
+            <p className="text-xs font-medium text-slate-600">
+              En camino, por antigüedad de cuenta
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {autonomia.enProgreso.map((b) => (
+                <span
+                  key={b.balde}
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                    b.balde === "15+ días" && b.n > 0
+                      ? "bg-red-50 text-red-700 ring-1 ring-red-200"
+                      : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  {b.balde}: {b.n}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Top temas */}

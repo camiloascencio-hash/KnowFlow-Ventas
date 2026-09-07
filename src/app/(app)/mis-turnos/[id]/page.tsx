@@ -5,6 +5,7 @@ import { CriticidadBadge, TipoBadge } from "@/components/Badges";
 import Markdown from "@/components/Markdown";
 import { db, schema } from "@/db";
 import { requireRole } from "@/lib/session";
+import { lecturasDe } from "@/lib/onboarding";
 import { ConfirmacionLectura } from "./ConfirmacionLectura";
 
 export default async function DetallePrimerTurnoPage({
@@ -32,6 +33,9 @@ export default async function DetallePrimerTurnoPage({
     .limit(1);
 
   if (!unidad) notFound();
+
+  const leidas = await lecturasDe(Number(session.user.id));
+  const confirmadaInicial = leidas.includes(unidad.id);
 
   return (
     <div className="mx-auto w-full max-w-2xl">
@@ -62,7 +66,7 @@ export default async function DetallePrimerTurnoPage({
         <Markdown>{unidad.contenidoMarkdown}</Markdown>
       </article>
 
-      <ConfirmacionLectura unidadId={unidad.id} />
+      <ConfirmacionLectura unidadId={unidad.id} confirmadaInicial={confirmadaInicial} />
     </div>
   );
 }

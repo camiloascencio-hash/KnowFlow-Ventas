@@ -1,31 +1,22 @@
-import { and, asc, eq } from "drizzle-orm";
-import { db, schema } from "@/db";
 import { requireRole } from "@/lib/session";
+import { lecturasDe, unidadesCriticasDe } from "@/lib/onboarding";
 import MisTurnosClient from "./MisTurnosClient";
 
+export const dynamic = "force-dynamic";
+
 /**
- * Ruta de aprendizaje "Mis primeros turnos": las unidades de criticidad ALTA
- * del cargo, cuya lectura se confirma al final. El progreso se guarda en
- * localStorage (privacidad por diseño: no se reporta a nadie).
+ * Ruta de aprendizaje "Mis primeras ventas": las unidades de criticidad ALTA
+ * del cargo, cuya lectura se confirma al final. El progreso vive en el
+ * servidor (tabla lecturas_confirmadas): permite medir tiempo real a
+ * autonomía de forma agregada, sin exponer nunca el detalle individual.
  */
 export default async function MisTurnosPage() {
   const session = await requireRole("trabajador_nuevo");
 
-  const unidades = await db
-    .select({
-      id: schema.unidadesConocimiento.id,
-      titulo: schema.unidadesConocimiento.titulo,
-      tipo: schema.unidadesConocimiento.tipo,
-    })
-    .from(schema.unidadesConocimiento)
-    .where(
-      and(
-        eq(schema.unidadesConocimiento.cargoId, session.user.cargoId!),
-        eq(schema.unidadesConocimiento.estado, "publicado"),
-        eq(schema.unidadesConocimiento.criticidad, "alta")
-      )
-    )
-    .orderBy(asc(schema.unidadesConocimiento.id));
+  const [unidades, leidas] = await Promise.all([
+    unidadesCriticasDe(session.user.cargoId!),
+    lecturasDe(Number(session.user.id)),
+  ]);
 
-  return <MisTurnosClient unidades={unidades} />;
+  return <MisTurnosClient unidades={unidades} leidasIniciales={leidas} />;
 }
